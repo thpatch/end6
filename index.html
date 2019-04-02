@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<title>Compiler/decompiler for th06/th07/th08/th09 .end files</title>
+<!--
+# Copyright (c) 2018 by Egor.
+#
+# This is free and unencumbered software released into the public domain.
+#
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
+#
+# In jurisdictions that recognize copyright laws, the author or authors
+# of this software dedicate any and all copyright interest in the
+# software to the public domain. We make this dedication for the benefit
+# of the public at large and to the detriment of our heirs and
+# successors. We intend this dedication to be an overt act of
+# relinquishment in perpetuity of all present and future rights to this
+# software under copyright law.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+# For more information, please refer to <http://unlicense.org/>
+-->
+<style>body{text-align:center}</style>
+<h1>Compiler/decompiler for th06/th07/th08/th09 .end files</h1>
+<sup>(bird brain edition)</sup>
+<p>Made by Egor of Touhou Patch Center.<br>Format documentation can be found <a href='https://www.thpatch.net/wiki/Format_reference/end06'>here</a>.<br></p>
+<noscript><div>JavaScript is required to view this page.</div></noscript>
+<input id='sjisbox' type='checkbox'>Use Shift-JIS instead of UTF-8.<br>
+<span style='color:gray;font-size:smaller'>(ZUN's files use Shift-JIS. thcrap uses UTF-8)</span>
+<table style='margin:auto'>
+	<tr>
+		<td><h3>Decompile</h3></td>
+		<td><h3>Recompile</h3></td>
+	</tr>
+	<tr>
+		<td><input id='filein' type='file'></td>
+		<td><button onclick='writefile(anchout,output,sjisbox)'>recompile</button></td>	
+	</tr>
+	<tr>
+		<td><button onclick='readfile(filein,output,sjisbox)'>decompile</button></td>
+		<td><a id='anchout' download='filename.end'></a></td>
+	</tr>
+</table>
+<textarea cols='80' rows='100' id='output'></textarea><br>
+<script>
+	"use strict";
+	var splitonws = function(s) {
+		var idx = s.search(/\s/);
+		if(idx == -1) {
+			return [s,''];
+		}
+		else {
+			return [s.substring(0,idx), s.substring(idx)];
+		}
+	}, ltrim = function(s) {
+		return s.replace(/^\s+/,'');
+	};
+	var formatters = {
+		s:{
+			tozun :function(s) {
+				s = ltrim(s);
+				if(s[0] != '"')
+					throw 'string argument expected, got: '+s;
+				var buf = '';
+				var i = 1;
+				while(i < s.length) {
+					if(s[i] == '"') {
+						++i;
+						break;
+					}
+					else if(s[i] == '\\') {
+						++i;
+						var c = {
+							'\\':'\\',
+							'a':'\a',
+							'b':'\b',
+							't':'\t',
+							'n':'\n',
+							'v':'\v',
+							'f':'\f',
+							'r':'\r',
+							'"':'\"',
+						}[s[i]];
+						buf += c === undefined ? '\\'+s[i] : c;
+					}
+					else {
+						buf += s[i];
+					}
+					++i;
+				}
+				return [buf, s.substring(i)];
+			},
+			tosource :function(s) {
+				[
+					[new RegExp('/\\\\/g'),'\\\\'],
+					[new RegExp('/\a/g'),'\\a'],
+					[new RegExp('/\b/g'),'\\b'],
+					[new RegExp('/\t/g'),'\\t'],
+					[new RegExp('/\n/g'),'\\n'],
+					[new RegExp('/\v/g'),'\\v'],
+					[new RegExp('/\f/g'),'\\f'],
+					[new RegExp('/\r/g'),'\\r'],
+					[new RegExp('/\"/g'),'\\"'],
+				].forEach(function(v) {
+					s=s.replace(v[0], v[1]);
+				});
+				return '"'+s+'"';
+			},
+		},
+		i:{
+			tozun :function(s) {
+				var arr = splitonws(ltrim(s));
+				return [String(parseInt(arr[0])),arr[1]];
+			},
+			tosource :function(s) {
+				return String(parseInt(s));
+			},
+		},
+		c:{
+			tozun :function(s) {
+				var arg = splitonws(ltrim(s))
+				if(arg[0].length != 7 || arg[0][0] != '#')
+					throw "expected #RRGGBB style string, got: " +arg[0];
+				return [String((parseInt(arg[0].substring(1,3),16)) | (parseInt(arg[0].substring(3,5),16)<<8) | (parseInt(arg[0].substring(5,7),16)<<16)), arg[1]];
+			},
+			tosource :function(s) {
+				var col = parseInt(s);
+				return '#' + (col&0xFF).toString(16) + ((col>>8)&0xFF).toString(16) + ((col>>16)&0xFF).toString(16);
+			},
+		},
+	};
+	var ops = [
+		['', 'display', 's'],
+		['2', 'fadein', 'i'],
+		['3', 'fadeout', 'i'],
+		['a', 'anm', 'iii'],
+		['b', 'background', 's'],
+		['c', 'color', 'c'],
+		['F', 'exec', 's'],
+		['M', 'musicfade', 'i'],
+		['m', 'musicplay', 's'],
+		['R', 'staffroll', 's'],
+		['r', 'waitreset', 'ii'],
+		['s', 'setdelay', 'ii'],
+		['V', 'scrollbg', 'ii'],
+		['v', 'setscroll', 'i'],
+		['w', 'wait', 'ii'],
+		['z', 'end', ''],
+	];
+	
+	var tozun = function(op, args) {
+		var s = '';
+		if(op[0] != '')
+			s = '@'+op[0];
+		for(var i=0;i<op[2].length;i++) {
+			var a = formatters[op[2][i]].tozun(args);
+			s += a[0] + '\0';
+			args = a[1];
+		}
+		return s+'\n';
+	};
+	var tosource = function(op, args) {
+		var s = op[1];
+		for(var i=0;i<op[2].length;i++) {
+			s += ' '+formatters[op[2][i]].tosource(args[i]);
+		}
+		return s+'\n';
+	};
+	var compile = function(src, sjis) {
+		if(sjis)
+			throw "sjis write not supported (yet)";
+		var arr = src.split('\n');
+		var s = '';
+		for(var i=0;i<arr.length;i++) {
+			var line = arr[i].trim();
+			if(line === '') continue;
+			var a = splitonws(line);
+			var od = ops.find(function(f) {return f[1] == a[0];});
+			s += tozun(od,a[1]);
+		}
+		var encoder = new TextEncoder();
+		return encoder.encode(s);
+	};
+	var decompile = function(ab, sjis) {
+		var decoder = new TextDecoder(sjis?"ms932":"utf-8");
+		var arr = decoder.decode(ab).split('\n');
+		arr.pop();
+		var s = '';
+		
+		var warned = false;
+		for(var i=0;i<arr.length;i++) {
+			var op = '';
+			var line = arr[i];
+			if(line[0] == '@') {
+				op = line[1];
+				line = line.substring(2);
+			}
+			var args = line.split('\0');
+			args.pop();
+			var od = ops.find(function(f) {return f[0] == op;});
+			if(!warned && args.length > od[2].length) {
+				alert('extra arguments detected.\n\nthis has no effect on the game, but you won\'t be able to recompile the file "bit-for-bit".\nMost likely you\'re decompiling th08 NDT english translation.');
+			}
+			s += tosource(od,args);
+		}
+		return s;
+	};
+	
+	window.readfile = function(f, output, sjis) {
+		try {
+			var reader = new FileReader();
+			reader.onload = function() {
+				output.value = decompile(reader.result, sjis.checked);
+			};
+			reader.readAsArrayBuffer(f.files[0]);
+		}
+		catch(err) {
+			alert(err.message);
+		}
+	};
+	window.writefile = function(a, input, sjis) {
+		try {
+			if(a.href && a.href != '') URL.revokeObjectURL(a.href);
+			a.href= URL.createObjectURL(new Blob([compile(input.value, sjis.checked)], {type:'application/octet-stream',endings:'transparent'}));
+			a.innerText = 'download';
+			var files = filein.files;
+			if(files.length > 0)
+				a.download = files[0].name;
+		}
+		catch(err) {
+			alert(err.message);
+		}
+	};
+</script>
