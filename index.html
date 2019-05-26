@@ -81,7 +81,7 @@
 						++i;
 						var c = {
 							'\\':'\\',
-							'a':'\a',
+							'a':'\x07',
 							'b':'\b',
 							't':'\t',
 							'n':'\n',
@@ -101,15 +101,15 @@
 			},
 			tosource :function(s) {
 				[
-					[new RegExp('/\\\\/g'),'\\\\'],
-					[new RegExp('/\a/g'),'\\a'],
-					[new RegExp('/\b/g'),'\\b'],
-					[new RegExp('/\t/g'),'\\t'],
-					[new RegExp('/\n/g'),'\\n'],
-					[new RegExp('/\v/g'),'\\v'],
-					[new RegExp('/\f/g'),'\\f'],
-					[new RegExp('/\r/g'),'\\r'],
-					[new RegExp('/\"/g'),'\\"'],
+					[new RegExp('\\\\/','g'),'\\\\'],
+					[new RegExp('\x07','g'),'\\a'],
+					[new RegExp('\b','g'),'\\b'],
+					[new RegExp('\t','g'),'\\t'],
+					[new RegExp('\n','g'),'\\n'],
+					[new RegExp('\v','g'),'\\v'],
+					[new RegExp('\f','g'),'\\f'],
+					[new RegExp('\r','g'),'\\r'],
+					[new RegExp('\"','g'),'\\"'],
 				].forEach(function(v) {
 					s=s.replace(v[0], v[1]);
 				});
@@ -209,6 +209,7 @@
 			var od = ops.find(function(f) {return f[0] == op;});
 			if(!warned && args.length > od[2].length) {
 				alert('extra arguments detected.\n\nthis has no effect on the game, but you won\'t be able to recompile the file "bit-for-bit".\nMost likely you\'re decompiling th08 NDT english translation.');
+				warned = true;
 			}
 			s += tosource(od,args);
 		}
