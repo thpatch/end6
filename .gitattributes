@@ -1,0 +1,5 @@
+*	text=auto
+*.html	text
+*.js	text
+*.css	text
+*.end	-text

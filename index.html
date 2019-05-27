@@ -54,6 +54,16 @@ Encoding: <select id='encoding' value='utf-8'>
 		<td><button onclick='readfile(filein,output,encoding)'>decompile</button></td>
 		<td><a id='anchout' download='filename.end'></a></td>
 	</tr>
+	<tr>
+		<td>
+			<hr>
+			<select style='display:none' id='patchSelect' oninput='patchSelected(this.selectedOptions[0],output)' >
+				<option selected value=''>Fetch from server...</option>
+			</select><br>
+			<a style='font-size:smaller' id='patchSource'></a>
+		</td>
+		<td></td>
+	</tr>
 </table>
 <textarea cols='80' rows='100' id='output'></textarea><br>
 <script>
@@ -231,6 +241,20 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 		});
 	};
+	window.readxhr = errwrap(function(url, output, enc) {
+		if(!url.match(new RegExp('^[a-z0-9]+/[a-z0-9]+/[a-z0-9]+\\.end$','i'))) {
+			throw new Error("Unsafe url");
+		}
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET","endfiles/"+url);
+		xhr.responseType = "arraybuffer";
+		xhr.onloadend = errwrap(function() {
+			if(xhr.readyState == 4 && xhr.status == 200 && xhr.responseType == "arraybuffer") {
+				output.value = decompile(xhr.response, enc);
+			}
+		});
+		xhr.send();
+	});
 	window.readfile = errwrap(function(f, output, enc) {
 		var reader = new FileReader();
 		reader.onload = function() {
@@ -246,4 +270,50 @@ Encoding: <select id='encoding' value='utf-8'>
 		if(files.length > 0)
 			a.download = files[0].name;
 	});
+	var games = {};
+	var spEndfiles = [];
+	window.patchSelected = errwrap(function(opt, output) {
+		if(opt.dataset.loadMore) {
+			patchSelect.selectedIndex = 0;
+			for(var opt2 of spEndfiles) {
+				patchSelect.add(opt2, opt);
+			}
+			patchSelect.removeChild(opt);
+		}
+		if(opt.dataset.game) {
+			var game = games[opt.dataset.game];
+			patchSource.href = game.source;
+			patchSource.innerHTML = "(source)";
+			readxhr(opt.value, output, game.encoding);
+		}
+		else {
+			patchSource.innerHTML = "";
+			patchSource.href = "";
+		}
+	});
+	window.endfilesCallback = errwrap(function(obj) {
+		for(var game in obj) {
+			games[game] = {
+				source: obj[game].source,
+				encoding: obj[game].encoding
+			};
+			for(var file of obj[game].files) {
+				var opt = document.createElement("option");
+				opt.value = opt.text = game+"/"+file;
+				opt.dataset.game = game;
+				if(game.startsWith("ja/")) {
+					patchSelect.add(opt);
+				}
+				else {
+					spEndfiles.push(opt);
+				}
+			}
+		}
+		var opt = document.createElement("option");
+		opt.dataset.loadMore='yes';
+		opt.text = 'Load static translations';
+		patchSelect.add(opt);
+		patchSelect.style.display = 'inline';
+	});
 </script>
+<script src='endfiles.js'></script>
