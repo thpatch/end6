@@ -345,6 +345,9 @@ Encoding: <select id='encoding' value='utf-8'>
 	});
 	if (loadMode == "loadWiki") {
 		errwrap(function(loadstr) {
+			if(loadstr=="") {
+				return;
+			}
 			var apibase = "https://www.thpatch.net/w/api.php";
 			var apicall = "?action=query&prop=imageinfo&iiprop=url&titles=File:";
 			var apicall2="&format=json"
