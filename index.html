@@ -265,7 +265,9 @@ Encoding: <select id='encoding' value='utf-8'>
 		};
 		reader.readAsArrayBuffer(f.files[0]);
 	});
+	var downloadFilename='filename.end';
 	window.writefile = errwrap(function(a, input, enc) {
+		a.download = downloadFilename;
 		if(a.href && a.href != '') URL.revokeObjectURL(a.href);
 		a.href= URL.createObjectURL(new Blob([compile(input.value, enc.value)], {type:'application/octet-stream',endings:'transparent'}));
 		a.innerText = 'download';
@@ -355,7 +357,7 @@ Encoding: <select id='encoding' value='utf-8'>
 			if(!loadstr.match(new RegExp('^lang_[a-z]+-th0[6-9]-[a-z0-9]+\\.end$','i'))) {
 				throw new Error("Unsafe url");
 			}
-
+			downloadFilename = loadstr;
 			var url = apibase+apicall+loadstr+apicall2;
 			var xhr = new XMLHttpRequest();
 			xhr.open("GET",url);
