@@ -280,17 +280,27 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 			patchSelect.removeChild(opt);
 		}
-		if(opt.dataset.game) {
+		if(opt.dataset.game !== undefined) {
 			var game = games[opt.dataset.game];
-			patchSource.href = game.source;
-			patchSource.innerHTML = "(source)";
-			readxhr(opt.value, output, game.encoding);
+			if(game) {
+				patchSource.href = game.source;
+				patchSource.innerHTML = "(source)";
+				readxhr(opt.value, output, game.encoding);
+			}
+			else {
+				throw new Error("Invalid url (no such lang/game)");
+			}
 		}
 		else {
 			patchSource.innerHTML = "";
 			patchSource.href = "";
 		}
 	});
+	var query = new URLSearchParams(window.location.search);
+	var loadMode = "";
+	if(query.has("load")) {
+		loadMode = "loadLocal";
+	}
 	window.endfilesCallback = errwrap(function(obj) {
 		for(var game in obj) {
 			games[game] = {
@@ -314,6 +324,18 @@ Encoding: <select id='encoding' value='utf-8'>
 		opt.text = 'Load static translations';
 		patchSelect.add(opt);
 		patchSelect.style.display = 'inline';
+		if(loadMode == "loadLocal") {
+			var loadstr = query.get("load");
+			var split = loadstr.split("/");
+			if(split.length == 3) {
+				var game = split[0] + "/" + split[1];
+				console.log({value:split,dataset:{game:game}});
+				patchSelected({value:loadstr,dataset:{game:game}}, output);
+			}
+			else {
+				throw new Error("Invalid url (should be lang/game/file.end)");
+			}
+		}
 	});
 </script>
 <script src='endfiles.js'></script>
