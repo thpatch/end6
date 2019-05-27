@@ -241,12 +241,9 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 		});
 	};
-	window.readxhr = errwrap(function(url, output, enc) {
-		if(!url.match(new RegExp('^[a-z0-9]+/[a-z0-9]+/[a-z0-9]+\\.end$','i'))) {
-			throw new Error("Unsafe url");
-		}
+	var readxhrUnsafe = function(url, output, enc) {
 		var xhr = new XMLHttpRequest();
-		xhr.open("GET","endfiles/"+url);
+		xhr.open("GET",url);
 		xhr.responseType = "arraybuffer";
 		xhr.onloadend = errwrap(function() {
 			if(xhr.readyState == 4 && xhr.status == 200 && xhr.responseType == "arraybuffer") {
@@ -254,6 +251,12 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 		});
 		xhr.send();
+	};
+	window.readxhr = errwrap(function(url, output, enc) {
+		if(!url.match(new RegExp('^[a-z0-9]+/[a-z0-9]+/[a-z0-9]+\\.end$','i'))) {
+			throw new Error("Unsafe url");
+		}
+		readxhrUnsafe("endfiles/"+url, output, enc);
 	});
 	window.readfile = errwrap(function(f, output, enc) {
 		var reader = new FileReader();
@@ -298,7 +301,10 @@ Encoding: <select id='encoding' value='utf-8'>
 	});
 	var query = new URLSearchParams(window.location.search);
 	var loadMode = "";
-	if(query.has("load")) {
+	if(query.has("loadWiki")) {
+		loadMode = "loadWiki";
+	}
+	else if(query.has("load")) {
 		loadMode = "loadLocal";
 	}
 	window.endfilesCallback = errwrap(function(obj) {
@@ -336,6 +342,41 @@ Encoding: <select id='encoding' value='utf-8'>
 				throw new Error("Invalid url (should be lang/game/file.end)");
 			}
 		}
+	});
+	if (loadMode == "loadWiki") {
+		errwrap(function(loadstr) {
+			var apibase = "https://www.thpatch.net/w/api.php";
+			var apicall = "?action=query&prop=imageinfo&iiprop=url&titles=File:";
+			var apicall2="&format=json&callback=onLoadWiki"
+
+			if(!loadstr.match(new RegExp('^lang_[a-z]+-th0[6-9]-[a-z0-9]+\\.end$','i'))) {
+				throw new Error("Unsafe url");
+			}
+
+			var script = document.createElement("script");
+			script.src = apibase+apicall+loadstr+apicall2;
+			document.body.appendChild(script);
+		})(query.get("loadWiki"));
+	};
+	window.onLoadWiki = errwrap(function(obj) {
+		console.log(obj);
+		if (!obj || !obj.query || !obj.query.pages) {
+			throw new Error("API error: malformed response");
+		}
+		var page;
+		for (var id in obj.query.pages) {
+			if(id < 0) throw new Error("API error: paqe not found")
+			page = obj.query.pages[id];
+			break
+		}
+		if (!page) {
+			throw new Error("API error: no pages");
+		}
+		if (!page.imageinfo || !page.imageinfo[0] || !page.imageinfo[0].url) {
+			throw new Error("API error: malformed response (page)");
+		}
+		
+		readxhrUnsafe(page.imageinfo[0].url, output, "utf-8");
 	});
 </script>
 <script src='endfiles.js'></script>
