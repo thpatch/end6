@@ -347,15 +347,22 @@ Encoding: <select id='encoding' value='utf-8'>
 		errwrap(function(loadstr) {
 			var apibase = "https://www.thpatch.net/w/api.php";
 			var apicall = "?action=query&prop=imageinfo&iiprop=url&titles=File:";
-			var apicall2="&format=json&callback=onLoadWiki"
+			var apicall2="&format=json"
 
 			if(!loadstr.match(new RegExp('^lang_[a-z]+-th0[6-9]-[a-z0-9]+\\.end$','i'))) {
 				throw new Error("Unsafe url");
 			}
 
-			var script = document.createElement("script");
-			script.src = apibase+apicall+loadstr+apicall2;
-			document.body.appendChild(script);
+			var url = apibase+apicall+loadstr+apicall2;
+			var xhr = new XMLHttpRequest();
+			xhr.open("GET",url);
+			xhr.responseType = "text";
+			xhr.onloadend = errwrap(function() {
+				if(xhr.readyState == 4 && xhr.status == 200 && xhr.responseType == "text") {
+					window.onLoadWiki(JSON.parse(xhr.response));
+				}
+			});
+			xhr.send();
 		})(query.get("loadWiki"));
 	};
 	window.onLoadWiki = errwrap(function(obj) {
