@@ -348,31 +348,6 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 		}
 	});
-	var md5=function(str) {
-		var tryMd5 = function(str) {
-			if(window.CryptoJS && window.CryptoJS.MD5) {
-				return Promise.resolve(CryptoJS.enc.Hex.stringify(CryptoJS.MD5(str)));
-			}
-			else {
-				return Promise.reject(new Error("CryptoJS not loaded"));
-			}
-		};
-
-		if(!window.fetch) {
-			return Promise.reject(new Error("Your browser is old"));
-		}
-
-		return tryMd5(str)
-			.then(
-				v=>v,
-				()=>fetch('crypto-js/core+md5.js')
-				.then(r=>r.text())
-				.then(function(func) {
-					new Function(func)();
-					return tryMd5(str);
-				})
-			);
-	};
 	var loadWiki = errwrap(function(loadstr) {
 		if(loadstr=="") {
 			return;
@@ -381,12 +356,9 @@ Encoding: <select id='encoding' value='utf-8'>
 			throw new Error("Unsafe url");
 		}
 		downloadFilename = loadstr;
-		md5(loadstr).then(function(digest) {
-			var baseurl = 'https://www.thpatch.net/w/images/';
-			var url = baseurl + digest[0] + '/' + digest[0] + digest[1] + '/' + loadstr;
-			console.log("loading from "+url);
-			readxhrUnsafe(url, output, "utf-8");
-		},errshow);
+		var url = 'mwimage.php?file='+loadstr;
+		console.log("loading from "+url);
+		readxhrUnsafe(url, output, "utf-8");
 	});
 	if (loadMode == "loadWiki") {
 		loadWiki(query.get("loadWiki"));
