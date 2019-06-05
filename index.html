@@ -230,14 +230,17 @@ Encoding: <select id='encoding' value='utf-8'>
 		}
 		return s;
 	};
+	var errshow = function(err) {
+		console.log(err);
+		alert(err.message);
+	};
 	var errwrap = function(f) {
 		return (function() {
 			try {
 				f.apply(null,arguments);
 			}
 			catch(err) {
-				console.log(err);
-				alert(err.message);
+				errshow(err);
 			}
 		});
 	};
@@ -345,50 +348,48 @@ Encoding: <select id='encoding' value='utf-8'>
 			}
 		}
 	});
-	if (loadMode == "loadWiki") {
-		errwrap(function(loadstr) {
-			if(loadstr=="") {
-				return;
+	var md5=function(str) {
+		var tryMd5 = function(str) {
+			if(window.CryptoJS && window.CryptoJS.MD5) {
+				return Promise.resolve(CryptoJS.enc.Hex.stringify(CryptoJS.MD5(str)));
 			}
-			var apibase = "https://www.thpatch.net/w/api.php";
-			var apicall = "?action=query&prop=imageinfo&iiprop=url&titles=File:";
-			var apicall2="&format=json"
+			else {
+				return Promise.reject(new Error("CryptoJS not loaded"));
+			}
+		};
 
-			if(!loadstr.match(new RegExp('^lang_[a-z]+-th0[6-9]-[a-z0-9]+\\.end$','i'))) {
-				throw new Error("Unsafe url");
-			}
-			downloadFilename = loadstr;
-			var url = apibase+apicall+loadstr+apicall2;
-			var xhr = new XMLHttpRequest();
-			xhr.open("GET",url);
-			xhr.responseType = "text";
-			xhr.onloadend = errwrap(function() {
-				if(xhr.readyState == 4 && xhr.status == 200 && xhr.responseType == "text") {
-					window.onLoadWiki(JSON.parse(xhr.response));
-				}
-			});
-			xhr.send();
-		})(query.get("loadWiki"));
+		if(!window.fetch) {
+			return Promise.reject(new Error("Your browser is old"));
+		}
+
+		return tryMd5(str)
+			.then(
+				v=>v,
+				()=>fetch('crypto-js/core+md5.js')
+				.then(r=>r.text())
+				.then(function(func) {
+					new Function(func)();
+					return tryMd5(str);
+				})
+			);
 	};
-	window.onLoadWiki = errwrap(function(obj) {
-		console.log(obj);
-		if (!obj || !obj.query || !obj.query.pages) {
-			throw new Error("API error: malformed response");
+	var loadWiki = errwrap(function(loadstr) {
+		if(loadstr=="") {
+			return;
 		}
-		var page;
-		for (var id in obj.query.pages) {
-			if(id < 0) throw new Error("API error: paqe not found")
-			page = obj.query.pages[id];
-			break
+		if(!loadstr.match(new RegExp('^lang_[a-z]+-th0[6-9]-[a-z0-9]+\\.end$','i'))) {
+			throw new Error("Unsafe url");
 		}
-		if (!page) {
-			throw new Error("API error: no pages");
-		}
-		if (!page.imageinfo || !page.imageinfo[0] || !page.imageinfo[0].url) {
-			throw new Error("API error: malformed response (page)");
-		}
-		
-		readxhrUnsafe(page.imageinfo[0].url, output, "utf-8");
+		downloadFilename = loadstr;
+		md5(loadstr).then(function(digest) {
+			var baseurl = 'https://www.thpatch.net/w/images/';
+			var url = baseurl + digest[0] + '/' + digest[0] + digest[1] + '/' + loadstr;
+			console.log("loading from "+url);
+			readxhrUnsafe(url, output, "utf-8");
+		},errshow);
 	});
+	if (loadMode == "loadWiki") {
+		loadWiki(query.get("loadWiki"));
+	}
 </script>
 <script src='endfiles.js'></script>
