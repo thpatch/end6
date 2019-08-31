@@ -2,4 +2,5 @@
 *.html	text
 *.js	text
 *.css	text
-*.end	-text
+*.end	binary
+*.php	text
