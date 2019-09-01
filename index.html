@@ -265,14 +265,18 @@ Encoding: <select id='encoding' value='utf-8'>
 	});
 	var downloadFilename='filename.end';
 	window.writefile = errwrap((a, input, enc) => {
+		a.download = downloadFilename;
+		if(a.href && a.href != '') {
+			URL.revokeObjectURL(a.href);
+			a.innerText = '';
+		}
+		var files = filein.files;
+		if(files.length > 0)
+			a.download = files[0].name;
+
 		compile(input.value,enc.value).then(errwrap((compiled) => {
-			a.download = downloadFilename;
-			if(a.href && a.href != '') URL.revokeObjectURL(a.href);
-			a.href= URL.createObjectURL(new Blob([compiled], {type:'application/octet-stream',endings:'transparent'}));
+			a.href = URL.createObjectURL(new Blob([compiled], {type:'application/octet-stream',endings:'transparent'}));
 			a.innerText = 'download';
-			var files = filein.files;
-			if(files.length > 0)
-				a.download = files[0].name;
 		}));
 	});
 	var games = {};
