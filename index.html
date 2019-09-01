@@ -3,7 +3,6 @@
 <head>
 <meta charset='utf-8'>
 <title>Compiler/decompiler for th06/th07/th08/th09 .end files</title>
-</head>
 <!--
 # Copyright (c) 2018-2019 by Egor.
 #
@@ -32,40 +31,44 @@
 #
 # For more information, please refer to <http://unlicense.org/>
 -->
+<style>
+	body{text-align:center}
+	.error-notice {color:red;font-weight:bold}
+	.small-notice {color:gray;font-size:smaller}
+	#main-panel {margin:auto}
+	#main-panel > tbody > tr > td {vertical-align:top}
+	#patchSelect {display:none}
+	#patchSource {font-size:smaller}
+</style>
+</head>
 <body>
-<style>body{text-align:center}</style>
 <h1>Compiler/decompiler for th06/th07/th08/th09 .end files</h1>
 <p>Made by Egor of Touhou Patch Center.<br>Format documentation can be found <a href='https://www.thpatch.net/wiki/Format_reference/end06'>here</a>.<br></p>
-<noscript><div>JavaScript is required to view this page.</div></noscript>
+<noscript><div class='error-notice'>JavaScript is required to view this page.</div></noscript>
 Encoding: <select id='encoding' value='utf-8'>
 	<option selected value='utf-8'>UTF-8</option>
 	<option value='ms932'>Shift-JIS</option>
 	<option value='windows-1251'>Windows-1251 (Cyrillic)</option>
 	<option value='windows-1252'>Windows-1252 (Latin)</option>
 </select><br>
-<span style='color:gray;font-size:smaller'>(ZUN's files use Shift-JIS. thcrap uses UTF-8)</span>
-<table style='margin:auto'>
-	<tr>
-		<td><h3>Decompile</h3></td>
-		<td><h3>Recompile</h3></td>
-	</tr>
-	<tr>
-		<td><input id='filein' type='file'></td>
-		<td><button onclick='writefile(anchout,output,encoding)'>recompile</button></td>
-	</tr>
-	<tr>
-		<td><button onclick='readfile(filein,output,encoding)'>decompile</button></td>
-		<td><a id='anchout' download='filename.end'></a></td>
-	</tr>
+<span class='small-notice'>(ZUN's files use Shift-JIS. thcrap uses UTF-8)</span>
+<table id='main-panel'>
 	<tr>
 		<td>
+			<h3>Decompile</h3><br>
+			<input id='filein' type='file'><br>
+			<button onclick='readfile(filein,output,encoding)'>decompile</button><br>
 			<hr>
-			<select style='display:none' id='patchSelect' oninput='patchSelected(this.selectedOptions[0],output)' >
+			<select id='patchSelect' oninput='patchSelected(this.selectedOptions[0],output)' >
 				<option selected value=''>Fetch from server...</option>
 			</select><br>
-			<a style='font-size:smaller' id='patchSource'></a>
+			<a id='patchSource'></a>&nbsp;
 		</td>
-		<td></td>
+		<td>
+			<h3>Recompile</h3><br>
+			<button onclick='writefile(anchout,output,encoding)'>recompile</button><br>
+			<a id='anchout' download='filename.end'></a><br>
+		</td>
 	</tr>
 </table>
 <textarea cols='80' rows='100' id='output'></textarea><br>
