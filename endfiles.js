@@ -1,3 +1,4 @@
+"use strict";
 endfilesCallback(
 {
 	"ja/th06": {

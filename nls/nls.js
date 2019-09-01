@@ -1,5 +1,5 @@
+"use strict";
 (function(global) {
-	"use strict";
 	function ANSIEncoder(table) {
 		this._table = new DataView(table);
 	};
