@@ -4,3 +4,4 @@
 *.css	text
 *.end	binary
 *.php	text
+*.nls	binary
